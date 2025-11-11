@@ -1,0 +1,5 @@
+```css *{box-sizing:border-box;font-family:Arial, sans-serif} body{margin:0;padding:0;background:#f7f7f7;color:#222} header{background:#222;color:white;padding:12px 
+20px;display:flex;justify-content:space-between;align-items:center} header nav a{color:white;margin-left:12px;text-decoration:none} .hero{padding:40px;text-align:center} 
+.btn{display:inline-block;padding:10px 16px;background:#e67e22;color:white;border-radius:6px;text-decoration:none} .menu{display:flex;gap:20px;padding:20px} 
+.menu-item{background:white;padding:12px;border-radius:8px;flex:1} .cart{width:220px;background:white;padding:12px;border-radius:8px} footer{text-align:center;padding:12px} ```
+---
