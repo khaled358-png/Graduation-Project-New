@@ -9,18 +9,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Tests
+      - name: Build Docker Image for Testing
         run: |
-          echo "No tests available"
+          docker build -t myapp-test .
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Run Container for Testing
+        run: |
+          docker run -d -p 3000:3000 --name myapp-test myapp-test
+          
+      - name: Test Server
+        run: |
+          sleep 5  # وقت بسيط للسيرفر يبدأ
+          curl -f http://localhost:3000 || exit 1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Stop & Remove Test Container
+        run: |
+          docker stop myapp-test
+          docker rm myapp-test
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
