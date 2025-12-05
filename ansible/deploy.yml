@@ -1,0 +1,70 @@
+---
+- name: Provision server for Restaurant Node App
+  hosts: all
+  become: yes
+
+  vars:
+    app_name: "restaurant-app"
+    app_port: 3000
+    app_repo: "https://github.com/khaled358-png/Graduation-Project-New.git"
+    app_dir: "/opt/restaurant-app"
+
+  tasks:
+
+    # 1) Install system dependencies
+    - name: Install required system packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - curl
+          - git
+        state: present
+        update_cache: yes
+
+    # 2) Install Docker
+    - name: Install Docker using official script
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        warn: false
+
+    # 3) Ensure Docker is running
+    - name: Ensure Docker service is enabled and started
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    # 4) Clone project
+    - name: Clone application code
+      git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dir }}"
+        version: "main"
+        force: yes
+
+    # 5) Build Docker image
+    - name: Build Docker image from project
+      command: docker build -t {{ app_name }} .
+      args:
+        chdir: "{{ app_dir }}"
+
+    # 6) Clean old running container
+    - name: Stop old container if exists
+      shell: docker stop {{ app_name }} || true
+
+    - name: Remove old container if exists
+      shell: docker rm {{ app_name }} || true
+
+    # 7) Remove old unused docker images
+    - name: Prune old Docker images
+      shell: docker image prune -f
+
+    # 8) Run the new container
+    - name: Run Docker container
+      command: >
+        docker run -d
+        --name {{ app_name }}
+        -p {{ app_port }}:3000
+        --restart=always
+        {{ app_name }}
