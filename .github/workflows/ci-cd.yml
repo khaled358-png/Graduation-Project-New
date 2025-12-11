@@ -7,9 +7,7 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-
     steps:
-      
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -23,7 +21,7 @@ jobs:
           
       - name: Test Server
         run: |
-          sleep 5  # وقت بسيط للسيرفر يبدأ
+          sleep 5
           curl -f http://localhost:3000 || exit 1
 
       - name: Stop & Remove Test Container
@@ -47,3 +45,19 @@ jobs:
 
       - name: Image Info
         run: docker images
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/graduation-project:latest
+            docker stop myapp || true
+            docker rm myapp || true
+            docker run -d -p 3000:3000 --name myapp ${{ secrets.DOCKERHUB_USERNAME }}/graduation-project:latest
