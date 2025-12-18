@@ -24,7 +24,7 @@
     # 2) Add deploy public key to EC2 user
     - name: Add deploy public key to EC2 user
       authorized_key:
-        user: ubuntu                  # أو أي يوزر في الـ EC2
+        user: ubuntu                 
         state: present
         key: "{{ lookup('file', '~/.ssh/deploy_key.pub') }}"
 
