@@ -57,12 +57,14 @@ resource "aws_security_group" "web_sg" {
   }
 
   # SSH - Port 22
-  ingress {
-    description = "Allow SSH from trusted IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["203.0.113.5/32"]  
+ ingress {
+  description = "Allow SSH temporarily"
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
   }
 
   # ------------------------------
