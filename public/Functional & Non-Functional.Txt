@@ -1,0 +1,36 @@
+Functional Requirements
+
+These are the features the website must directly provide:
+
+Display the Home page with restaurant information.
+
+Display the Menu with dish names, descriptions, and prices.
+
+Display the Contact Us page with the restaurant location and opening hours.
+
+Enable navigation between pages via the Navigation Bar.
+
+Support automatic deployment using a CI/CD pipeline on an EC2 server.
+
+Automate infrastructure setup using Terraform and Ansible.
+
+Allow easy addition of new content (dishes, prices, texts) without breaking the website.
+
+
+
+
+Non-Functional Requirements
+
+These are general qualities and constraints, not direct features:
+
+Performance: Pages should load quickly.
+
+Usability: Simple and clear design for an easy user experience.
+
+Availability: The website should be accessible at all times (depending on EC2 deployment).
+
+Maintainability: Code should be easy to modify and develop, with the pipeline enabling fast updates.
+
+Scalability: Easy to add new features like forms or extra menu items.
+
+Security: Protect server access via SSH Keys and secure the EC2 Security Group.
