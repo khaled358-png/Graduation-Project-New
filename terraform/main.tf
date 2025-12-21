@@ -8,20 +8,31 @@ terraform {
 }
 
 # ------------------------------
-# AWS Provider Configuration
+# AWS Provider
 # ------------------------------
 provider "aws" {
-  region = "eu-central-1"
+  region = "us-east-1"
 }
 
 # ------------------------------
-# Virtual Private Cloud (VPC)
+# VPC
 # ------------------------------
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
     Name = "devops-project-vpc"
+  }
+}
+
+# ------------------------------
+# Internet Gateway
+# ------------------------------
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "devops-project-igw"
   }
 }
 
@@ -38,43 +49,62 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
+# ------------------------------
+# Route Table (Public)
+# ------------------------------
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "public-route-table"
+  }
+}
+
+# ------------------------------
+# Route Table Association
+# ------------------------------
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+# ------------------------------
+# Security Group
+# ------------------------------
 resource "aws_security_group" "web_sg" {
   name        = "web-sg"
-  description = "Allow HTTP and SSH traffic"
+  description = "Allow SSH and HTTP"
   vpc_id      = aws_vpc.main.id
 
-  # ------------------------------
-  # Ingress rules
-  # ------------------------------
+  # SSH (مفتوح مؤقتًا)
+  ingress {
+    description = "Allow SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-  # HTTP - Port 80
+  # HTTP
   ingress {
     description = "Allow HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH - Port 22
- ingress {
-  description = "Allow SSH temporarily"
-  from_port   = 22
-  to_port     = 22
-  protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-  }
-
-  # ------------------------------
-  # Egress rules
-  # ------------------------------
+  # Outbound
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]  
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -82,18 +112,62 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-
 # ------------------------------
-# EC2 Instance (Example Only)
+# EC2 Instance
 # ------------------------------
 resource "aws_instance" "app_server" {
-  ami                    = "ami-1234567890"   # Placeholder, not real
-  instance_type          = "t2.micro"
+  ami                    = "ami-0ecb62995f68bb549" # Ubuntu
+  instance_type          = "t3.micro"
   subnet_id              = aws_subnet.public_subnet.id
   vpc_security_group_ids = [aws_security_group.web_sg.id]
+  key_name               = "my-key"
 
   tags = {
-    Name = "devops-app-server"
+    Name = "Graduation-Project-New"
   }
 }
+output "ec2_public_ip" {
+  value = aws_instance.app_server.public_ip
+}
 
+resource "null_resource" "ansible_provisioning" {
+  # Trigger only when the instance is created or its IP changes
+  triggers = {
+    ec2_public_ip_address = join(" ", aws_instance.app_server.*.public_ip)
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+
+    working_dir = "/home/khaled/project/Graduation-Project-New/ansible"
+
+    command = <<-EOT
+      set -e
+
+      echo "Waiting for EC2 SSH to be ready..."
+
+      # Wait for SSH on every EC2 instance
+      for ip in ${join(" ", aws_instance.app_server.*.public_ip)}; do
+        echo "Waiting for SSH on $ip ..."
+        until nc -z -w5 $ip 22; do
+          echo "SSH not ready on $ip yet... retrying in 5s"
+          sleep 5
+        done
+        echo "SSH is ready on $ip"
+      done
+
+
+      echo "[webservers]" > temp_inventory
+
+      # Loop through all instance public IPs
+      for ip in ${join(" ", aws_instance.app_server.*.public_ip)}; do
+        echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=/home/khaled/.ssh/my-key.pem" >> temp_inventory
+      done
+
+      ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i temp_inventory deploy.yml
+
+      rm temp_inventory
+      
+    EOT
+  }
+}
